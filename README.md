@@ -161,6 +161,6 @@ gcc -std=c11 exemplo.c -Iinc -Lbuild -lc_json -Wl,-rpath,$PWD/build -o exemplo
 
 ## Licença
 
-Distribuído sob a licença [MIT](LICENSE). Copyright © 2025 Thiago Silveira.
+Distribuído sob a licença [MIT](LICENSE). Copyright © 2026 Thiago Silveira.
 
 A biblioteca inclui [cJSON](https://github.com/DaveGamble/cJSON), também sob licença MIT, em `src/` e `inc/`.
