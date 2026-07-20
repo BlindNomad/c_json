@@ -1,0 +1,17 @@
+quality:cppcheck:
+  extends: .quality_base
+  stage: quality
+  script:
+    - bash _scripts/tests/cppcheck.sh
+
+quality:cpplint:
+  extends: .quality_base
+  stage: quality
+  script:
+    - bash _scripts/tests/cpplint.sh
+
+quality:flawfinder:
+  extends: .quality_base
+  stage: quality
+  script:
+    - bash _scripts/tests/flawfinder.sh

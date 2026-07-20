@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+      - "release/**"
+  pull_request:
+    branches:
+      - master
+      - develop
+      - "release/**"
+
+jobs:
+  gtest:
+    name: Unit tests (GTest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential cmake curl
+
+      - name: Build and run unit tests
+        run: bash _scripts/tests/ctest.sh
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential cmake curl python3-pip
+          pip3 install --user gcovr
+
+      - name: Run coverage (min 90%)
+        run: |
+          export PATH="${HOME}/.local/bin:${PATH}"
+          bash _scripts/tests/coverage.sh
+
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage/cobertura-coverage.xml
+            coverage/html/
+          if-no-files-found: ignore
+
+  valgrind:
+    name: Valgrind (memory leaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential cmake curl valgrind
+
+      - name: Run Valgrind
+        run: bash _scripts/tests/valgrind.sh
+
+  fuzz:
+    name: Fuzz (libFuzzer)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang cmake curl
+
+      - name: Run fuzzing
+        env:
+          FUZZ_TIME: "120"
+          CC: clang
+          CXX: clang++
+        run: bash _scripts/tests/fuzz.sh

@@ -1,0 +1,18 @@
+stages:
+  - build
+  - quality
+  - test
+
+# Roda para Merge Requests para 'develop' e para commits diretos nas branches principais.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == 'develop'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH =~ /^release\// || $CI_COMMIT_BRANCH == 'master'
+
+# Inclui os arquivos que contêm os templates e as definições dos jobs.
+include:
+  - local: '/_gitlab/1-templates.yml'
+  - local: '/_gitlab/2-build-jobs.yml'
+  - local: '/_gitlab/3-quality-jobs.yml'
+  - local: '/_gitlab/4-test-jobs.yml'
+  - local: '/_gitlab/5-stable-branch-jobs.yml'

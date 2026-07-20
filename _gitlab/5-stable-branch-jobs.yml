@@ -1,0 +1,11 @@
+# Branches estáveis (master, release/*) são cobertas pelos jobs principais
+# definidos em 2-build-jobs.yml e 4-test-jobs.yml, conforme workflow em .gitlab-ci.yml.
+#
+# Este arquivo reserva extensão para jobs exclusivos de release no futuro
+# (ex.: publicação de artefatos, smoke tests adicionais).
+
+release:placeholder:
+  stage: test
+  image: gcc:13
+  rules:
+    - when: never

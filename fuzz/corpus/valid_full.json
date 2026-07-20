@@ -1,0 +1,1 @@
+{"name": "Jose","age": 30,"is_active": true,"balance": 123.45,"permissions": ["read", "write"],"address": {  "street": "Rua Principal",  "number": 100}}
