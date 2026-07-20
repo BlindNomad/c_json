@@ -68,7 +68,8 @@ typedef struct c_json *C_JSON;
  * @brief Cria e inicializa um novo objeto C_JSON.
  *
  * @details Este objeto encapsula a logica de manipulacao JSON e gerenciamento de memoria.
- * A configuracao padrao para chaves duplicadas e `C_JSON_CONFIG_UPDATE_SAME_TAG`.
+ * Usa o alocador seguro `c_json_mem_*`. A configuracao para chaves duplicadas
+ * e `C_JSON_CONFIG_UPDATE_SAME_TAG`.
  *
  * @return Um ponteiro para o novo objeto `C_JSON` ou `NULL` se a alocacao falhar.
  */

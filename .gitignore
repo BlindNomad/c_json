@@ -1,0 +1,18 @@
+# DIR
+.old
+.vscode
+build
+coverage
+.venv
+dump
+
+# FILES
+*.o
+*.a
+*.so
+*.out
+CMakeUserPresets.json
+
+# Dependências de terceiros baixadas pelo CI
+src/cJSON.c
+inc/cJSON.h

@@ -12,6 +12,7 @@
 #ifndef INC_C_JSON_LIST_H_
 #define INC_C_JSON_LIST_H_
 
+#include <stddef.h>
 #include <stdbool.h>
 
 /**
@@ -33,7 +34,7 @@ typedef struct st_list *P_C_JSON_LIST;
 typedef void (*c_json_list_cb_free)(void *ptr);
 
 /**
- * @brief Cria e aloca uma nova lista encadeada vazia.
+ * @brief Cria e aloca uma nova lista encadeada vazia com `c_json_mem_*`.
  *
  * @return Um ponteiro (`P_C_JSON_LIST`) para a nova lista, ou `NULL` em caso de falha
  * de alocação de memória.
