@@ -15,6 +15,9 @@
 #include "c_json_mem.h"
 #include "c_json_list.h"
 
+typedef void *(*c_json_list_malloc_fn)(size_t size);
+typedef void (*c_json_list_free_fn)(void *ptr);
+
 typedef struct st_list_node {
     int index;
     void *ptr;

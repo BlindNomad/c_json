@@ -21,6 +21,9 @@
 #include "c_json_mem.h"
 #include "c_json.h"
 
+/* Declaracao interna: lista com alocadores customizados (nao exportada no .h). */
+P_C_JSON_LIST c_json_list_new_with_alloc(void *(*malloc_fn)(size_t), void (*free_fn)(void *));
+
 // ============================================================
 //  DEFINES
 // ============================================================
@@ -115,7 +118,10 @@ tag_null:
     return false;
 }
 
-C_JSON c_json_new_with_hooks(const cJSON_Hooks *hooks) {
+/**
+ * @brief Cria um C_JSON com alocadores por instancia (uso interno).
+ */
+static C_JSON c_json_private_new_with_hooks(const cJSON_Hooks *hooks) {
     C_JSON param;
 
     if (hooks == NULL) {
@@ -167,7 +173,7 @@ C_JSON c_json_new(void) {
 
     hooks.malloc_fn = c_json_mem_malloc;
     hooks.free_fn = c_json_mem_free;
-    return c_json_new_with_hooks(&hooks);
+    return c_json_private_new_with_hooks(&hooks);
 }
 
 void c_json_free_cb(void *ptr) {
@@ -800,7 +806,7 @@ C_JSON c_json_get_object(C_JSON param, const char *TAG) {
     }
 
     /// Criando o dados para o usuario
-    value = c_json_new_with_hooks(&param->hooks);
+    value = c_json_private_new_with_hooks(&param->hooks);
     if (value == NULL) {
         goto new_failed;
     }
@@ -1320,7 +1326,7 @@ C_JSON c_json_get_array_object(C_JSON param, const char *TAG, uint32_t index) {
     }
 
     /// Criando o dados para o usuario
-    value = c_json_new_with_hooks(&param->hooks);
+    value = c_json_private_new_with_hooks(&param->hooks);
     if (value == NULL) {
         goto new_failed;
     }
