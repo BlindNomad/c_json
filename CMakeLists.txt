@@ -15,10 +15,6 @@ option(ENABLE_COVERAGE "Enable code coverage reporting" OFF)
 option(BUILD_TESTS "Build the unit tests" ON)
 option(ENABLE_FUZZING "Build libFuzzer targets (requires Clang)" OFF)
 
-if(ANDROID)
-    set(BUILD_TESTS OFF CACHE BOOL "Disable tests on Android cross-compile" FORCE)
-endif()
-
 if(ENABLE_COVERAGE)
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
         message(STATUS "Coverage enabled. Adding --coverage flag.")
