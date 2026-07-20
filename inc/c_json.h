@@ -19,6 +19,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include "cJSON.h"
+
 #if defined(_WIN32)
 #define C_JSON_API __declspec(dllexport)
 #else
@@ -68,11 +70,24 @@ typedef struct c_json *C_JSON;
  * @brief Cria e inicializa um novo objeto C_JSON.
  *
  * @details Este objeto encapsula a logica de manipulacao JSON e gerenciamento de memoria.
- * A configuracao padrao para chaves duplicadas e `C_JSON_CONFIG_UPDATE_SAME_TAG`.
+ * Usa o alocador seguro `c_json_mem_*` por padrao. A configuracao para chaves duplicadas
+ * e `C_JSON_CONFIG_UPDATE_SAME_TAG`.
  *
  * @return Um ponteiro para o novo objeto `C_JSON` ou `NULL` se a alocacao falhar.
  */
 C_JSON_API C_JSON c_json_new(void);
+
+/**
+ * @brief Cria um objeto `C_JSON` com alocadores customizados por instancia.
+ *
+ * @details Os hooks sao aplicados ao handle, a arvore cJSON, a string de serialize
+ * e a lista de sub-objetos obtidos. Nao altera alocadores globais do processo.
+ *
+ * @param hooks Ponteiro para `cJSON_Hooks` com `malloc_fn` e `free_fn` validos.
+ *
+ * @return Um ponteiro para o novo objeto `C_JSON` ou `NULL` se falhar a validacao/alocacao.
+ */
+C_JSON_API C_JSON c_json_new_with_hooks(const cJSON_Hooks *hooks);
 
 /**
  * @brief Libera todos os recursos de memoria alocados por um objeto C_JSON.

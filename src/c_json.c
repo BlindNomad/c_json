@@ -36,6 +36,7 @@ struct c_json {
     cJSON *json_object;
     P_C_JSON_LIST json_object_getted;
     E_C_JSON_CONFIG config;
+    cJSON_Hooks hooks;
 };
 
 // ============================================================
@@ -114,29 +115,59 @@ tag_null:
     return false;
 }
 
-C_JSON c_json_new(void) {
-    static bool hooks_initialized = false;
+C_JSON c_json_new_with_hooks(const cJSON_Hooks *hooks) {
     C_JSON param;
-    cJSON_Hooks hooks;
 
-    if (hooks_initialized == false) {
-        hooks.malloc_fn = c_json_mem_malloc;
-        hooks.free_fn = c_json_mem_free;
-        cJSON_InitHooks(&hooks);
-        hooks_initialized = true;
+    if (hooks == NULL) {
+        goto hooks_null;
+    }
+    if (hooks->malloc_fn == NULL) {
+        goto malloc_fn_null;
+    }
+    if (hooks->free_fn == NULL) {
+        goto free_fn_null;
     }
 
-    param = c_json_mem_malloc(sizeof(struct c_json));
+    param = hooks->malloc_fn(sizeof(struct c_json));
     if (param == NULL) {
-        return NULL;
+        goto alloc_failed;
     }
 
+    memset(param, 0, sizeof(struct c_json));
+    param->hooks = *hooks;
     param->json_string = NULL;
-    param->json_object = cJSON_CreateObject();
-    param->json_object_getted = c_json_list_new();
+    param->json_object = cJSON_CreateObjectWithHooks(&param->hooks);
+    if (param->json_object == NULL) {
+        goto json_object_alloc_failed;
+    }
+
+    param->json_object_getted = c_json_list_new_with_alloc(param->hooks.malloc_fn, param->hooks.free_fn);
+    if (param->json_object_getted == NULL) {
+        goto list_alloc_failed;
+    }
+
     c_json_set_config(param, C_JSON_CONFIG_UPDATE_SAME_TAG);
 
     return param;
+
+list_alloc_failed:
+    cJSON_Delete(param->json_object);
+    param->json_object = NULL;
+json_object_alloc_failed:
+    param->hooks.free_fn(param);
+alloc_failed:
+free_fn_null:
+malloc_fn_null:
+hooks_null:
+    return NULL;
+}
+
+C_JSON c_json_new(void) {
+    cJSON_Hooks hooks;
+
+    hooks.malloc_fn = c_json_mem_malloc;
+    hooks.free_fn = c_json_mem_free;
+    return c_json_new_with_hooks(&hooks);
 }
 
 void c_json_free_cb(void *ptr) {
@@ -144,23 +175,27 @@ void c_json_free_cb(void *ptr) {
 }
 
 C_JSON c_json_free(C_JSON param) {
+    cJSON_Hooks hooks;
+
     if (param == NULL) {
         return NULL;
     }
+
+    hooks = param->hooks;
 
     if (param->json_object != NULL) {
         cJSON_Delete(param->json_object);
     }
 
     if (param->json_string != NULL) {
-        c_json_mem_free(param->json_string);
+        hooks.free_fn(param->json_string);
     }
 
     if (param->json_object_getted != NULL) {
         c_json_list_free(param->json_object_getted, c_json_free_cb);
     }
 
-    c_json_mem_free(param);
+    hooks.free_fn(param);
 
     return NULL;
 }
@@ -180,7 +215,7 @@ bool c_json_parser(C_JSON param, const char *value) {
         param->json_object = NULL;
     }
 
-    parsed = cJSON_Parse(value);
+    parsed = cJSON_ParseWithHooks(value, &param->hooks);
     if (parsed == NULL) {
         goto parse_failed;
     }
@@ -207,7 +242,7 @@ bool c_json_serialize(C_JSON param, char **value, size_t *size, E_C_JSON_STR_ESC
     }
 
     if (param->json_string != NULL) {
-        c_json_mem_free(param->json_string);
+        param->hooks.free_fn(param->json_string);
         param->json_string = NULL;
     }
 
@@ -251,7 +286,7 @@ bool c_json_print(C_JSON param, E_C_JSON_STR_ESCAPE escape) {
     }
 
     printf("%s\n", out);
-    c_json_mem_free(out);
+    param->hooks.free_fn(out);
 
     return true;
 
@@ -384,7 +419,7 @@ bool c_json_add_object(C_JSON param, const char *TAG, C_JSON value) {
         cJSON_DeleteItemFromObjectCaseSensitive(param->json_object, TAG);
     }
 
-    copy = cJSON_Duplicate(value->json_object, 1);
+    copy = cJSON_DuplicateWithHooks(value->json_object, 1, &param->hooks);
     if (copy == NULL) {
         goto duplicate_failed;
     }
@@ -495,7 +530,7 @@ bool c_json_add_array_boolean(C_JSON param, const char *TAG, bool value) {
 
     json_array = cJSON_GetObjectItemCaseSensitive(param->json_object, TAG);
     if (json_array == NULL) {
-        json_array = cJSON_CreateArray();
+        json_array = cJSON_CreateArrayWithHooks(&param->hooks);
         if (json_array == NULL) {
             goto create_array_failed;
         }
@@ -506,7 +541,7 @@ bool c_json_add_array_boolean(C_JSON param, const char *TAG, bool value) {
         goto item_not_array;
     }
 
-    json_value = cJSON_CreateBool(value);
+    json_value = cJSON_CreateBoolWithHooks(value, &param->hooks);
     if (json_value == NULL) {
         goto create_bool_failed;
     }
@@ -556,7 +591,7 @@ bool c_json_add_array_object(C_JSON param, const char *TAG, int type, C_JSON val
 
     json_array = cJSON_GetObjectItemCaseSensitive(param->json_object, TAG);
     if (json_array == NULL) {
-        json_array = cJSON_CreateArray();
+        json_array = cJSON_CreateArrayWithHooks(&param->hooks);
         if (json_array == NULL) {
             goto create_array_failed;
         }
@@ -567,7 +602,7 @@ bool c_json_add_array_object(C_JSON param, const char *TAG, int type, C_JSON val
         goto item_not_array;
     }
 
-    copy = cJSON_Duplicate(value->json_object, 1);
+    copy = cJSON_DuplicateWithHooks(value->json_object, 1, &param->hooks);
     if (copy == NULL) {
         goto duplicate_failed;
     }
@@ -611,7 +646,7 @@ bool c_json_add_array_string(C_JSON param, const char *TAG, const char *value) {
 
     json_array = cJSON_GetObjectItemCaseSensitive(param->json_object, TAG);
     if (json_array == NULL) {
-        json_array = cJSON_CreateArray();
+        json_array = cJSON_CreateArrayWithHooks(&param->hooks);
         if (json_array == NULL) {
             goto create_array_failed;
         }
@@ -622,7 +657,7 @@ bool c_json_add_array_string(C_JSON param, const char *TAG, const char *value) {
         goto item_not_array;
     }
 
-    json_value = cJSON_CreateString(value);
+    json_value = cJSON_CreateStringWithHooks(value, &param->hooks);
     if (json_value == NULL) {
         goto create_string_failed;
     }
@@ -664,7 +699,7 @@ bool c_json_add_array_number(C_JSON param, const char *TAG, double value) {
 
     json_array = cJSON_GetObjectItemCaseSensitive(param->json_object, TAG);
     if (json_array == NULL) {
-        json_array = cJSON_CreateArray();
+        json_array = cJSON_CreateArrayWithHooks(&param->hooks);
         if (json_array == NULL) {
             goto create_array_failed;
         }
@@ -675,7 +710,7 @@ bool c_json_add_array_number(C_JSON param, const char *TAG, double value) {
         goto item_not_array;
     }
 
-    json_value = cJSON_CreateNumber(value);
+    json_value = cJSON_CreateNumberWithHooks(value, &param->hooks);
     if (json_value == NULL) {
         goto create_number_failed;
     }
@@ -765,7 +800,7 @@ C_JSON c_json_get_object(C_JSON param, const char *TAG) {
     }
 
     /// Criando o dados para o usuario
-    value = c_json_new();
+    value = c_json_new_with_hooks(&param->hooks);
     if (value == NULL) {
         goto new_failed;
     }
@@ -773,7 +808,7 @@ C_JSON c_json_get_object(C_JSON param, const char *TAG) {
     if (value->json_object != NULL) {
         cJSON_Delete(value->json_object);
     }
-    value->json_object = cJSON_Duplicate(item, 1);
+    value->json_object = cJSON_DuplicateWithHooks(item, 1, &value->hooks);
     if (value->json_object == NULL) {
         goto duplicate_failed;
     }
@@ -1285,7 +1320,7 @@ C_JSON c_json_get_array_object(C_JSON param, const char *TAG, uint32_t index) {
     }
 
     /// Criando o dados para o usuario
-    value = c_json_new();
+    value = c_json_new_with_hooks(&param->hooks);
     if (value == NULL) {
         goto new_failed;
     }
@@ -1294,7 +1329,7 @@ C_JSON c_json_get_array_object(C_JSON param, const char *TAG, uint32_t index) {
     if (value->json_object != NULL) {
         cJSON_Delete(value->json_object);
     }
-    value->json_object = cJSON_Duplicate(json_object, 1);
+    value->json_object = cJSON_DuplicateWithHooks(json_object, 1, &value->hooks);
     if (value->json_object == NULL) {
         goto duplicate_failed;
     }

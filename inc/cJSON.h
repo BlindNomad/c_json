@@ -99,6 +99,13 @@ then using the CJSON_API_VISIBILITY flag to "export" the same symbols the way CJ
 #define cJSON_IsReference 256
 #define cJSON_StringIsConst 512
 
+typedef struct cJSON_Hooks
+{
+      /* malloc/free are CDECL on Windows regardless of the default calling convention of the compiler, so ensure the hooks allow passing those functions directly. */
+      void *(CJSON_CDECL *malloc_fn)(size_t sz);
+      void (CJSON_CDECL *free_fn)(void *ptr);
+} cJSON_Hooks;
+
 /* The cJSON structure: */
 typedef struct cJSON
 {
@@ -120,14 +127,10 @@ typedef struct cJSON
 
     /* The item's name string, if this item is the child of, or is in the list of subitems of an object. */
     char *string;
-} cJSON;
 
-typedef struct cJSON_Hooks
-{
-      /* malloc/free are CDECL on Windows regardless of the default calling convention of the compiler, so ensure the hooks allow passing those functions directly. */
-      void *(CJSON_CDECL *malloc_fn)(size_t sz);
-      void (CJSON_CDECL *free_fn)(void *ptr);
-} cJSON_Hooks;
+    /* Per-item allocator hooks (copied at creation; used by Delete/Print and child allocation). */
+    cJSON_Hooks hooks;
+} cJSON;
 
 typedef int cJSON_bool;
 
@@ -157,6 +160,8 @@ CJSON_PUBLIC(cJSON *) cJSON_ParseWithLength(const char *value, size_t buffer_len
 /* If you supply a ptr in return_parse_end and parsing fails, then return_parse_end will contain a pointer to the error so will match cJSON_GetErrorPtr(). */
 CJSON_PUBLIC(cJSON *) cJSON_ParseWithOpts(const char *value, const char **return_parse_end, cJSON_bool require_null_terminated);
 CJSON_PUBLIC(cJSON *) cJSON_ParseWithLengthOpts(const char *value, size_t buffer_length, const char **return_parse_end, cJSON_bool require_null_terminated);
+/* Same as Parse, but allocate the resulting tree with the given hooks (NULL uses global hooks). */
+CJSON_PUBLIC(cJSON *) cJSON_ParseWithHooks(const char *value, const cJSON_Hooks *hooks);
 
 /* Render a cJSON entity to text for transfer/storage. */
 CJSON_PUBLIC(char *) cJSON_Print(const cJSON *item);
@@ -209,6 +214,13 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateRaw(const char *raw);
 CJSON_PUBLIC(cJSON *) cJSON_CreateArray(void);
 CJSON_PUBLIC(cJSON *) cJSON_CreateObject(void);
 
+/* Create helpers that stamp the given allocator hooks on the new item (NULL uses global hooks). */
+CJSON_PUBLIC(cJSON *) cJSON_CreateBoolWithHooks(cJSON_bool boolean, const cJSON_Hooks *hooks);
+CJSON_PUBLIC(cJSON *) cJSON_CreateNumberWithHooks(double num, const cJSON_Hooks *hooks);
+CJSON_PUBLIC(cJSON *) cJSON_CreateStringWithHooks(const char *string, const cJSON_Hooks *hooks);
+CJSON_PUBLIC(cJSON *) cJSON_CreateArrayWithHooks(const cJSON_Hooks *hooks);
+CJSON_PUBLIC(cJSON *) cJSON_CreateObjectWithHooks(const cJSON_Hooks *hooks);
+
 /* Create a string where valuestring references a string so
  * it will not be freed by cJSON_Delete */
 CJSON_PUBLIC(cJSON *) cJSON_CreateStringReference(const char *string);
@@ -253,6 +265,8 @@ CJSON_PUBLIC(cJSON_bool) cJSON_ReplaceItemInObjectCaseSensitive(cJSON *object,co
 
 /* Duplicate a cJSON item */
 CJSON_PUBLIC(cJSON *) cJSON_Duplicate(const cJSON *item, cJSON_bool recurse);
+/* Duplicate into memory owned by the destination hooks (NULL uses global hooks). */
+CJSON_PUBLIC(cJSON *) cJSON_DuplicateWithHooks(const cJSON *item, cJSON_bool recurse, const cJSON_Hooks *hooks);
 /* Duplicate will create a new, identical cJSON item to the one you pass, in new memory that will
  * need to be released. With recurse!=0, it will duplicate any children connected to the item.
  * The item->next and ->prev pointers are always zero on return from Duplicate. */

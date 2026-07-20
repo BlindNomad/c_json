@@ -12,6 +12,7 @@
 #ifndef INC_C_JSON_LIST_H_
 #define INC_C_JSON_LIST_H_
 
+#include <stddef.h>
 #include <stdbool.h>
 
 /**
@@ -33,12 +34,32 @@ typedef struct st_list *P_C_JSON_LIST;
 typedef void (*c_json_list_cb_free)(void *ptr);
 
 /**
- * @brief Cria e aloca uma nova lista encadeada vazia.
+ * @brief Função de alocação usada pela lista.
+ */
+typedef void *(*c_json_list_malloc_fn)(size_t size);
+
+/**
+ * @brief Função de liberação usada pela lista.
+ */
+typedef void (*c_json_list_free_fn)(void *ptr);
+
+/**
+ * @brief Cria e aloca uma nova lista encadeada vazia com `c_json_mem_*`.
  *
  * @return Um ponteiro (`P_C_JSON_LIST`) para a nova lista, ou `NULL` em caso de falha
  * de alocação de memória.
  */
 P_C_JSON_LIST c_json_list_new(void);
+
+/**
+ * @brief Cria uma lista usando alocadores customizados.
+ *
+ * @param malloc_fn Função de alocação (não pode ser `NULL`).
+ * @param free_fn   Função de liberação (não pode ser `NULL`).
+ *
+ * @return Lista nova ou `NULL` em falha/argumentos invalidos.
+ */
+P_C_JSON_LIST c_json_list_new_with_alloc(c_json_list_malloc_fn malloc_fn, c_json_list_free_fn free_fn);
 
 /**
  * @brief Libera toda a memória associada à lista, incluindo seus nós e,
